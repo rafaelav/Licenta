@@ -12,11 +12,6 @@ char *change_bytes;
 FILE *file;
 int typeOfAttack;
 
-void error(const char *msg) {
-	perror(msg);
-	exit(1);
-}
-
 void changeDirectionAttack(char * originalMsg, int length)
 {
 	//TODO
@@ -43,13 +38,14 @@ void changeBytesAttack(char * originalMsg, int length)
 {
 	char ch;
 	char *content;
-	extension =(char *) calloc(NOBYTES, sizeof(char));
+	content =(char *) calloc(NOBYTES, sizeof(char));
 	int start;
+	int i;
 
 	file = fopen(change_bytes,"r");
 	// reading from file an starting byte from which the message will be changed
-	fscanf(file, "%d", start);
-	fscanf(file, "%c", ch);
+	fscanf(file, "%d", &start);
+	fscanf(file, "%c", &ch);
 	if(ch!=' ')
 		error("Change bytes file not according to regulations (no_a - no_b)");
 
@@ -58,8 +54,10 @@ void changeBytesAttack(char * originalMsg, int length)
 
 	dprintf("position of starting byte and content to overwrite: %d - %s",start,content);
 
-	// alter message
-	strcat(originalMsg,extension);
+	// change message
+	for(i=start; i<start+strlen(content); i++)
+		originalMsg[i] = content[i-start];
+
 	dprintf("modified message: %s",originalMsg);
 
 	fclose(file);

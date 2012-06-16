@@ -18,5 +18,6 @@
 bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr);
 bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr);
 void init(int argc, char** argv);
+void error(const char *msg);
 
 #endif /* PROXY_H_ */
