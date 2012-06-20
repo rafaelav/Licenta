@@ -14,6 +14,7 @@
 #include "proxy.h"
 
 #define NOBYTES 10
+#define RULE_LEN 100
 
 #define CHANGE_DIRECTION 1
 #define ADDING_BYTES 2

@@ -125,8 +125,10 @@ void init(int argc, char **argv)
 	{
 		dprintf("Attack -> Adding Bytes");
 		typeOfAttack = ADDING_BYTES;
+		if(strlen(argv[2])==0)
+			error("[ATTACKER] No file named added");
 		// allocating space for file name
-		add_bytes = (char *) calloc(strlen(argv[1])+1,sizeof(char));
+		add_bytes = (char *) calloc(strlen(argv[2])+1,sizeof(char));
 		// keeping the filename from which we will read the bytes to extra add to message
 		strcpy(add_bytes,argv[2]);
 		dprintf("add_bytes: %s",add_bytes);
@@ -137,8 +139,10 @@ void init(int argc, char **argv)
 	{
 		dprintf("Attack -> Changing Bytes");
 		typeOfAttack = CHANGING_BYTES;
+		if(strlen(argv[2])==0)
+				error("[ATTACKER] No file named added");
 		// allocating space for file name
-		change_bytes = (char *) calloc(strlen(argv[1])+1,sizeof(char));
+		change_bytes = (char *) calloc(strlen(argv[2])+1,sizeof(char));
 		// keeping the filename from which we will read the bytes to extra add to message
 		strcpy(change_bytes,argv[2]);
 		dprintf("change_bytes: %s",change_bytes);

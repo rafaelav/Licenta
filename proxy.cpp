@@ -135,9 +135,12 @@ void ReceiveFromExterior()
 		ntohs(sockAddr.sin_port),n); // network_to_host_short for port
 
 	// function for manipulating message before sending the message to the interior machine
-	val = ProcessMessageFromExterior(msg,n,sockAddr);
+	val = ProcessMessageFromExterior(msg,strlen(msg),sockAddr);
 	if(val == false)
+	{
+		dprintf("Not forwarding message from exterior to interior");
 		return;
+	}
 
 	// verifying if socket corresponding to this client on server side exists
 	list<ASSOC>::iterator it;
@@ -200,7 +203,10 @@ void ReceiveFromInterior(ASSOC assoc)
 	// function for manipulating message before sending the message to the exterior world
 	val = ProcessMessageFromInterior(msg,n,addr);
 	if(val == false)
+	{
+		dprintf("Not forwarding message from interior to exterior");
 		return;
+	}
 
 	// send to exterior knowing the correspondence because of association (assoc)
 	dprintf("Trying to SEND message to exterior ...");
