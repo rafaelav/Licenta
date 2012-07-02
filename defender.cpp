@@ -118,24 +118,31 @@ bool changeBytesDefense(char * originalMsg, int lmsg)
 	{
 		memset(rule, 0, RULE_LEN);
 		memset(rule, '*', RULE_LEN-2);
+		memset(line, 0, NOBYTES*3);
 		fscanf(file, "%s", line);
+		dprintf(">>> Am citit: %s ",line);
 		if(strcmp(line,"start_pattern")!=0)
 		{
-			error("[DEFENDER][CHBYTHES]Incorrect structured file - should have blocks starting with start_pattern...end_pattern");
+			continue;
+			//error("[DEFENDER][CHBYTHES]Incorrect structured file - should have blocks starting with start_pattern...end_pattern");
 		}
 		while(strcmp(line,"end_pattern")!=0)
 		{
+			memset(line, 0, NOBYTES*3);
 			fscanf(file, "%d", &pos);
 			fscanf(file, "%s", line);
 
 			// default rule
 			if(pos==0 && strcmp(line,"null")==0)
+			{
+				fclose(file);
 				return false;	// message is ok
+			}
 
 			for(i=pos; i<pos+strlen(line); i++)
 				rule[i]=line[i-pos];
 
-			memset(line, 0, NOBYTES*3);
+			//memset(line, 0, NOBYTES*3);
 		}
 
 		// we presume the rule will fit the message
@@ -151,9 +158,12 @@ bool changeBytesDefense(char * originalMsg, int lmsg)
 
 		// if a rule was found and it fited the message
 		if(ruleFits == true)
+		{
+			fclose(file);
 			return false;
+		}
 	}
-
+	fclose(file);
 	return true;	// message did not fit any rule and it was not a default rule anywhere
 }
 

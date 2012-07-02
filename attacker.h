@@ -13,6 +13,7 @@
 #define CHANGE_DIRECTION 1
 #define ADDING_BYTES 2
 #define CHANGING_BYTES 3
+#define UNDEFINED 4
 #include "proxy.h"
 #include <string.h>
 #include <sys/types.h>

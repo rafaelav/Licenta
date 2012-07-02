@@ -148,4 +148,6 @@ void init(int argc, char **argv)
 		dprintf("change_bytes: %s",change_bytes);
 		return;
 	}
+
+	typeOfAttack = UNDEFINED;
 }

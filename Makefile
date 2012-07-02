@@ -16,5 +16,5 @@ defender.o: defender.cpp defender.h
 	g++ -c defender.cpp -o defender.o	
 
 init: 
-	sudo iptables -A PREROUTING -t nat -p udp --dport 1234 -j REDIRECT --to-ports 30002
-	sudo iptables -A PREROUTING -t nat -p udp --dport 30003 -j REDIRECT --to-ports 1234
+	sudo iptables -t nat -A PREROUTING -p udp ! -i lo --dport 1234 -j REDIRECT --to-port 30002
+	#sudo iptables -A POSTROUTING -t nat -p udp ! -i lo --sport 30002 -j SNAT --to-source $(IP):	1234

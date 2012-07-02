@@ -8,12 +8,12 @@
 #ifndef PROXY_H_
 #define PROXY_H_
 
-#define SERVER_ADDR "192.168.1.2"
-#define SERVER_PORT 1500
+//#define SERVER_ADDR "192.168.1.2"
+#define SERVER_PORT 1234
 
 #define LISTEN_PORT 30002
 
-#define MSG_SIZE 200
+#define MSG_SIZE 2000
 
 bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr);
 bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr);

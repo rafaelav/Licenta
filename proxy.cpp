@@ -114,6 +114,7 @@ int CreateNewAssociation(struct sockaddr_in sockAddr)
 void ReceiveFromExterior()
 {
 	int n;
+	int size;
 	bool val;
 	char msg[MSG_SIZE];
 	struct sockaddr_in sockAddr, addr;
@@ -121,10 +122,12 @@ void ReceiveFromExterior()
 	int addrLen = sizeof(sockAddr);
 	bool found = false;
 
+	memset(msg, 0, MSG_SIZE);
 	dprintf("Trying to receive message from exterior...");
 
 	// receive message
 	n = recvfrom(listenerSock, msg, MSG_SIZE, 0, (struct sockaddr *) &sockAddr, (socklen_t *) &addrLen);
+	size = n;
 	if(n < 0)
 	{
 		error("ReceiveFromExterior - Problem with receiving from socket");
@@ -135,12 +138,12 @@ void ReceiveFromExterior()
 		ntohs(sockAddr.sin_port),n); // network_to_host_short for port
 
 	// function for manipulating message before sending the message to the interior machine
-	val = ProcessMessageFromExterior(msg,strlen(msg),sockAddr);
+	/*val = ProcessMessageFromExterior(msg,strlen(msg),sockAddr);
 	if(val == false)
 	{
 		dprintf("Not forwarding message from exterior to interior");
 		return;
-	}
+	}*/
 
 	// verifying if socket corresponding to this client on server side exists
 	list<ASSOC>::iterator it;
@@ -167,7 +170,7 @@ void ReceiveFromExterior()
 
 	dprintf("Trying to send message to interior...");
 
-	n = sendto(intSock, msg, strlen(msg)+1, 0, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+	n = sendto(intSock, msg, size, 0, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 	if(n < 0)
 	{
 		error("ReceiveFromExterior - Problem with sending to socket");
@@ -176,12 +179,13 @@ void ReceiveFromExterior()
 
 	printf("[SEN *->INT]: to %s:UDP%u : %d \n",
 		inet_ntoa(serverAddr.sin_addr),
-		ntohs(serverAddr.sin_port),strlen(msg)); // network_to_host_short for port
+		ntohs(serverAddr.sin_port),n); // network_to_host_short for port
 }
 
 void ReceiveFromInterior(ASSOC assoc)
 {
 	char msg[MSG_SIZE];
+	int size;
 	int n;
 	bool val;	// used to analyze if message will be forwarded or not
 	struct sockaddr_in addr;
@@ -191,6 +195,7 @@ void ReceiveFromInterior(ASSOC assoc)
 
 	// receive message from inbound machine
 	n = recvfrom(assoc.sock, msg, MSG_SIZE, 0, (struct sockaddr *) &addr, (socklen_t *) &addrLen);
+	size = n;
 	if(n < 0)
 	{
 		error("ReceiveFromInterior - Problem with receiving from socket");
@@ -198,27 +203,27 @@ void ReceiveFromInterior(ASSOC assoc)
 
 	printf("[REC INT->*]: from %s:UDP%u : %d \n",
 		inet_ntoa(addr.sin_addr),
-		ntohs(addr.sin_port),strlen(msg)); // network_to_host_short for port
+		ntohs(addr.sin_port),size); // network_to_host_short for port
 
 	// function for manipulating message before sending the message to the exterior world
-	val = ProcessMessageFromInterior(msg,n,addr);
+	/*val = ProcessMessageFromInterior(msg,n,addr);
 	if(val == false)
 	{
 		dprintf("Not forwarding message from interior to exterior");
 		return;
-	}
+	}*/
 
 	// send to exterior knowing the correspondence because of association (assoc)
 	dprintf("Trying to SEND message to exterior ...");
-	n = sendto(listenerSock, msg, strlen(msg), 0, (struct sockaddr *) &assoc.addr, sizeof(assoc.addr));
+	n = sendto(listenerSock, msg, size, 0, (struct sockaddr *) &assoc.addr, sizeof(assoc.addr));
 	if(n < 0)
 	{
 		error("ReceiveFromInterior - Problem with sending to socket");
 	}
 
-	printf("[SEN *->EXT]: from %s:UDP%u : %d \n",
+	printf("[SEN *->EXT]: to %s:UDP%u : %d \n",
 		inet_ntoa(assoc.addr.sin_addr),
-		ntohs(assoc.addr.sin_port),strlen(msg)); // network_to_host_short for port
+		ntohs(assoc.addr.sin_port),n); // network_to_host_short for port
 
 }
 
