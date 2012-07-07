@@ -10,14 +10,14 @@
 char *add_bytes;
 char *change_bytes;
 FILE *file;
-int typeOfAttack;
+int typeOfAttackExterior, typeOfAttackInterior;
 
-void changeDirectionAttack(char * originalMsg, int length)
+void changeDirectionAttack(char * originalMsg, int length, int &extraInfo)
 {
-	//TODO
+
 }
 
-void addExtraBytesAttack(char * originalMsg, int length)
+void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo)
 {
 	char * extension;
 	extension =(char *) calloc(NOBYTES, sizeof(char));
@@ -31,10 +31,12 @@ void addExtraBytesAttack(char * originalMsg, int length)
 	strcat(originalMsg,extension);
 	dprintf("modified message: %s",originalMsg);
 
+	extraInfo = strlen(extension);
+
 	fclose(file);
 }
 
-void changeBytesAttack(char * originalMsg, int length)
+void changeBytesAttack(char * originalMsg, int length, int &extraInfo)
 {
 	char ch;
 	char *content;
@@ -63,43 +65,30 @@ void changeBytesAttack(char * originalMsg, int length)
 	fclose(file);
 }
 
-/*void AttackerBehaviour(char * originalMsg, int length, int typeOfAttack)
+bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo)
 {
-	switch(typeOfAttack)
+	switch(typeOfAttackInterior)
 	{
 		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
-		case CHANGE_DIRECTION: changeDirectionAttack(originalMsg, length); break;
+		case CHANGE_DIRECTION: changeDirectionAttack(msg, n, extraInfo); break;
 		// the attack will lead to adding extra bytes of info to the message such that the application will crash
-		case ADDING_BYTES: addExtraBytesAttack(originalMsg, length); break;
+		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo); break;
 		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
-		case CHANGING_BYTES: changeBytesAttack(originalMsg, length); break;
-	}
-}*/
-
-bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr)
-{
-	switch(typeOfAttack)
-	{
-		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
-		case CHANGE_DIRECTION: changeDirectionAttack(msg, n); break;
-		// the attack will lead to adding extra bytes of info to the message such that the application will crash
-		case ADDING_BYTES: addExtraBytesAttack(msg, n); break;
-		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
-		case CHANGING_BYTES: changeBytesAttack(msg, n); break;
+		case CHANGING_BYTES: changeBytesAttack(msg, n, extraInfo); break;
 	}
 	return true;
 }
 
-bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr)
+bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo)
 {
-	switch(typeOfAttack)
+	switch(typeOfAttackExterior)
 	{
 		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
-		case CHANGE_DIRECTION: changeDirectionAttack(msg, n); break;
+		case CHANGE_DIRECTION: changeDirectionAttack(msg, n, extraInfo); break;
 		// the attack will lead to adding extra bytes of info to the message such that the application will crash
-		case ADDING_BYTES: addExtraBytesAttack(msg, n); break;
+		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo); break;
 		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
-		case CHANGING_BYTES: changeBytesAttack(msg, n); break;
+		case CHANGING_BYTES: changeBytesAttack(msg, n, extraInfo); break;
 	}
 	return true;
 }
@@ -114,40 +103,84 @@ void init(int argc, char **argv)
 
 	dprintf(">>> %s",argv[0]);
 
+	if(strlen(argv[1])==0)
+		error("[ATTACKER] No tag for behavior outside->inside");
+
 	if(strcmp(argv[1],"a-direction") == 0)
 	{
 		dprintf("Attack -> Change Direction");
-		typeOfAttack = CHANGE_DIRECTION;
+		typeOfAttackExterior = CHANGE_DIRECTION;
 		return;
 	}
 
 	if(strcmp(argv[1],"a-addbytes") == 0)
 	{
 		dprintf("Attack -> Adding Bytes");
-		typeOfAttack = ADDING_BYTES;
+		typeOfAttackExterior = ADDING_BYTES;
+
 		if(strlen(argv[2])==0)
+			error("[ATTACKER] No tag for behavior inside->outside");
+		if(strcmp(argv[2],"a-addbytes") == 0)
+			typeOfAttackInterior = ADDING_BYTES;
+		else
+			if(strcmp(argv[2],"a-changebytes") == 0)
+				typeOfAttackInterior = CHANGING_BYTES;
+			else
+				typeOfAttackInterior = UNDEFINED;
+
+		if(strlen(argv[3])==0)
 			error("[ATTACKER] No file named added");
 		// allocating space for file name
-		add_bytes = (char *) calloc(strlen(argv[2])+1,sizeof(char));
+		add_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
 		// keeping the filename from which we will read the bytes to extra add to message
-		strcpy(add_bytes,argv[2]);
+		strcpy(add_bytes,argv[3]);
 		dprintf("add_bytes: %s",add_bytes);
 		return;
 	}
 
+
 	if(strcmp(argv[1],"a-changebytes") == 0)
 	{
 		dprintf("Attack -> Changing Bytes");
-		typeOfAttack = CHANGING_BYTES;
+		typeOfAttackExterior = CHANGING_BYTES;
+
 		if(strlen(argv[2])==0)
+			error("[ATTACKER] No tag for behavior inside->outside");
+		if(strcmp(argv[2],"a-addbytes") == 0)
+			typeOfAttackInterior = ADDING_BYTES;
+		else
+			if(strcmp(argv[2],"a-changebytes") == 0)
+				typeOfAttackInterior = CHANGING_BYTES;
+			else
+				typeOfAttackInterior = UNDEFINED;
+
+		if(strlen(argv[3])==0)
 				error("[ATTACKER] No file named added");
 		// allocating space for file name
-		change_bytes = (char *) calloc(strlen(argv[2])+1,sizeof(char));
+		change_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
 		// keeping the filename from which we will read the bytes to extra add to message
-		strcpy(change_bytes,argv[2]);
+		strcpy(change_bytes,argv[3]);
 		dprintf("change_bytes: %s",change_bytes);
 		return;
 	}
 
-	typeOfAttack = UNDEFINED;
+	typeOfAttackExterior = UNDEFINED;
+
+	if(strlen(argv[2])==0)
+		error("[ATTACKER] No tag for behavior inside->outside");
+	if(strcmp(argv[2],"a-addbytes") == 0)
+		typeOfAttackInterior = ADDING_BYTES;
+	else
+		if(strcmp(argv[2],"a-changebytes") == 0)
+			typeOfAttackInterior = CHANGING_BYTES;
+		else
+			typeOfAttackInterior = UNDEFINED;
+
+	if(strlen(argv[3])==0)
+			error("[ATTACKER] No file named added");
+	// allocating space for file name
+	change_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
+	// keeping the filename from which we will read the bytes to extra add to message
+	strcpy(change_bytes,argv[3]);
+	dprintf("change_bytes: %s",change_bytes);
 }

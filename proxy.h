@@ -13,10 +13,11 @@
 
 #define LISTEN_PORT 30002
 
-#define MSG_SIZE 2000
+#define MSG_SIZE 500
+#define MAX_MSG_INIT 20
 
-bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr);
-bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr);
+bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo);
+bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo);
 void init(int argc, char** argv);
 void error(const char *msg);
 

@@ -14,6 +14,7 @@
 #define ADDING_BYTES 2
 #define CHANGING_BYTES 3
 #define UNDEFINED 4
+#define MAX_EXT 100
 #include "proxy.h"
 #include <string.h>
 #include <sys/types.h>

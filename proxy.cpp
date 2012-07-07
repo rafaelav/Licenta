@@ -21,6 +21,9 @@
 
 using namespace std;
 
+int msgCountExt = 0;
+int msgCountInt = 0;
+
 typedef struct {
 	struct sockaddr_in addr;
 	int sock;
@@ -121,6 +124,7 @@ void ReceiveFromExterior()
 	int intSock;
 	int addrLen = sizeof(sockAddr);
 	bool found = false;
+	int extraInfo = 0;	// used for other info received from modules
 
 	memset(msg, 0, MSG_SIZE);
 	dprintf("Trying to receive message from exterior...");
@@ -137,14 +141,25 @@ void ReceiveFromExterior()
 		inet_ntoa(sockAddr.sin_addr),
 		ntohs(sockAddr.sin_port),n); // network_to_host_short for port
 
-	// function for manipulating message before sending the message to the interior machine
-	/*val = ProcessMessageFromExterior(msg,strlen(msg),sockAddr);
-	if(val == false)
+	// any manipulation of packets will be done just after the communication through the proxy will be established
+	msgCountExt++;
+	if(msgCountExt>=MAX_MSG_INIT)
 	{
-		dprintf("Not forwarding message from exterior to interior");
-		return;
-	}*/
+		msgCountExt = MAX_MSG_INIT+1;
+	}
 
+	// just after the first MAX_MSG_INIT messages have been exchanged
+	if(msgCountExt>=MAX_MSG_INIT)
+	{
+		// function for manipulating message before sending the message to the interior machine
+		val = ProcessMessageFromExterior(msg,size,sockAddr,extraInfo);
+		dprintf("[EXT] extraInfo field -> %d", extraInfo);
+		if(val == false)
+		{
+			dprintf("Not forwarding message from exterior to interior");
+			return;
+		}
+	}
 	// verifying if socket corresponding to this client on server side exists
 	list<ASSOC>::iterator it;
 
@@ -170,7 +185,7 @@ void ReceiveFromExterior()
 
 	dprintf("Trying to send message to interior...");
 
-	n = sendto(intSock, msg, size, 0, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+	n = sendto(intSock, msg, size+extraInfo, 0, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 	if(n < 0)
 	{
 		error("ReceiveFromExterior - Problem with sending to socket");
@@ -190,6 +205,7 @@ void ReceiveFromInterior(ASSOC assoc)
 	bool val;	// used to analyze if message will be forwarded or not
 	struct sockaddr_in addr;
 	int addrLen = sizeof(addr);
+	int extraInfo = 0;	// used for other info received from modules
 
 	dprintf("Trying to RECEIVE message from interior...");
 
@@ -205,17 +221,29 @@ void ReceiveFromInterior(ASSOC assoc)
 		inet_ntoa(addr.sin_addr),
 		ntohs(addr.sin_port),size); // network_to_host_short for port
 
-	// function for manipulating message before sending the message to the exterior world
-	/*val = ProcessMessageFromInterior(msg,n,addr);
-	if(val == false)
+	// any manipulation of packets will be done just after the communication through the proxy will be established
+	msgCountInt++;
+	if(msgCountInt>=MAX_MSG_INIT)
 	{
-		dprintf("Not forwarding message from interior to exterior");
-		return;
-	}*/
+		msgCountInt = MAX_MSG_INIT+1;
+	}
+
+	// just after the first MAX_MSG_INIT messages have been exchanged
+	if(msgCountInt>=MAX_MSG_INIT)
+	{
+		// function for manipulating message before sending the message to the exterior world
+		val = ProcessMessageFromInterior(msg,size,addr,extraInfo);
+		dprintf("[EXT] extraInfo field -> %d", extraInfo);
+		if(val == false)
+		{
+			dprintf("Not forwarding message from interior to exterior");
+			return;
+		}
+	}
 
 	// send to exterior knowing the correspondence because of association (assoc)
 	dprintf("Trying to SEND message to exterior ...");
-	n = sendto(listenerSock, msg, size, 0, (struct sockaddr *) &assoc.addr, sizeof(assoc.addr));
+	n = sendto(listenerSock, msg, size+extraInfo, 0, (struct sockaddr *) &assoc.addr, sizeof(assoc.addr));
 	if(n < 0)
 	{
 		error("ReceiveFromInterior - Problem with sending to socket");
@@ -232,24 +260,19 @@ int main(int argc, char** argv) {
 	init(argc,argv);
 	initialize();
 
-	/*Adding the new socket File Descriptor to reading descriptors vector and to readFDS set
-	 *From now on, as soon as any client tries to connect to our server, the select function will
-	 *trigger this socket.*/
+	// add socket to the reading file descriptors vector -> select will be able to trigger the socket
 	FD_SET(listenerSock, &readFDS);
 	nfds = listenerSock;
 
-	//Used for backing up the FD_SETs as they will be modified by the select function
+	// used for backup because select will modify them
 	fd_set readFDS_Temp;
 	int crtSock;
 
 	while (1) {
-		//Backing up the FD_SET as it will be modified by the select function
+		// making backup
 		readFDS_Temp = readFDS;
 
-		/*Calling the select function
-		 *Those listed in readfds will be watched to see if characters become available for reading (more precisely, to see  if
-		 *a  read  will  not  block and those in writefds will be watched to see if a write will not block
-		 */
+		// call select -> will listen to readFDS and see if anything is available
 		if (select(nfds + 1, &readFDS_Temp, NULL, NULL, NULL) == -1)
 			error("ERROR in select");
 
@@ -259,8 +282,7 @@ int main(int argc, char** argv) {
 			ReceiveFromExterior();
 		}
 
-		/*Now we cycle through all the other file descriptors in readFDS_Temp, and
-		 *if one is FD_ISSET(), it means that I can read there. So we do the deed! :P */
+		// go throw all descriptors to see if any of them is set -> means it can be read from it
 		list<ASSOC>::iterator it;
 		
 		for(it=assocList.begin(); it!=assocList.end(); it++)
@@ -271,7 +293,7 @@ int main(int argc, char** argv) {
 			if(!FD_ISSET(crtSock,&readFDS_Temp))
 				continue;
 
-			// There is something to read from socket
+			// there is something to read from socket
 			ReceiveFromInterior(*it);
 		}
 
