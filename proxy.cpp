@@ -21,8 +21,10 @@
 
 using namespace std;
 
-int msgCountExt = 0;
-int msgCountInt = 0;
+//int msgCountExt = 0;
+//int msgCountInt = 0;
+int countInt = 0;
+int countExt = 0;
 
 typedef struct {
 	struct sockaddr_in addr;
@@ -141,25 +143,26 @@ void ReceiveFromExterior()
 		inet_ntoa(sockAddr.sin_addr),
 		ntohs(sockAddr.sin_port),n); // network_to_host_short for port
 
+	countExt++;
 	// any manipulation of packets will be done just after the communication through the proxy will be established
-	msgCountExt++;
+	/*	msgCountExt++;
 	if(msgCountExt>=MAX_MSG_INIT)
 	{
 		msgCountExt = MAX_MSG_INIT+1;
-	}
+	}*/
 
 	// just after the first MAX_MSG_INIT messages have been exchanged
-	if(msgCountExt>=MAX_MSG_INIT)
-	{
+	//if(msgCountExt>=MAX_MSG_INIT)
+	//{
 		// function for manipulating message before sending the message to the interior machine
-		val = ProcessMessageFromExterior(msg,size,sockAddr,extraInfo);
+		val = ProcessMessageFromExterior(msg,size,sockAddr,extraInfo,countExt);
 		dprintf("[EXT] extraInfo field -> %d", extraInfo);
 		if(val == false)
 		{
 			dprintf("Not forwarding message from exterior to interior");
 			return;
 		}
-	}
+	//}
 	// verifying if socket corresponding to this client on server side exists
 	list<ASSOC>::iterator it;
 
@@ -221,25 +224,26 @@ void ReceiveFromInterior(ASSOC assoc)
 		inet_ntoa(addr.sin_addr),
 		ntohs(addr.sin_port),size); // network_to_host_short for port
 
+	countInt++;
 	// any manipulation of packets will be done just after the communication through the proxy will be established
-	msgCountInt++;
+/*	msgCountInt++;
 	if(msgCountInt>=MAX_MSG_INIT)
 	{
 		msgCountInt = MAX_MSG_INIT+1;
-	}
+	}*/
 
 	// just after the first MAX_MSG_INIT messages have been exchanged
-	if(msgCountInt>=MAX_MSG_INIT)
-	{
+//	if(msgCountInt>=MAX_MSG_INIT)
+//	{
 		// function for manipulating message before sending the message to the exterior world
-		val = ProcessMessageFromInterior(msg,size,addr,extraInfo);
+		val = ProcessMessageFromInterior(msg,size,addr,extraInfo,countInt);
 		dprintf("[EXT] extraInfo field -> %d", extraInfo);
 		if(val == false)
 		{
 			dprintf("Not forwarding message from interior to exterior");
 			return;
 		}
-	}
+//	}
 
 	// send to exterior knowing the correspondence because of association (assoc)
 	dprintf("Trying to SEND message to exterior ...");

@@ -11,19 +11,38 @@ char *add_bytes;
 char *change_bytes;
 FILE *file;
 int typeOfAttackExterior, typeOfAttackInterior;
+int alternate;
 
 void changeDirectionAttack(char * originalMsg, int length, int &extraInfo)
 {
 
 }
 
-void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo)
+void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &count)
 {
 	char * extension;
 	extension =(char *) calloc(NOBYTES, sizeof(char));
 
-	// reading from file an extension
 	file = fopen(add_bytes,"r");
+	// reading from file number (alternate bad/good packets)
+	fscanf(file,"%d",&alternate);
+
+	// [alternate] number of messages have been modified -> [alternate] messages should not be modified
+	if(count <= alternate)
+	{
+		//dprintf("count<=alternate/");
+		fclose(file);
+		return;
+	}
+	if(count > alternate*2)
+	{
+		//dprintf("count>2*alternate/");
+		count = 0; 	//reset count
+		fclose(file);
+		return;
+	}
+
+	// reading from file an extension
 	fscanf(file, "%s", extension);
 	dprintf("extension from file: %s",extension);
 
@@ -65,28 +84,28 @@ void changeBytesAttack(char * originalMsg, int length, int &extraInfo)
 	fclose(file);
 }
 
-bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo)
+bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo, int &countInt)
 {
 	switch(typeOfAttackInterior)
 	{
 		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
 		case CHANGE_DIRECTION: changeDirectionAttack(msg, n, extraInfo); break;
 		// the attack will lead to adding extra bytes of info to the message such that the application will crash
-		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo); break;
+		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo, countInt); break;
 		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
 		case CHANGING_BYTES: changeBytesAttack(msg, n, extraInfo); break;
 	}
 	return true;
 }
 
-bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo)
+bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo, int &countExt)
 {
 	switch(typeOfAttackExterior)
 	{
 		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
 		case CHANGE_DIRECTION: changeDirectionAttack(msg, n, extraInfo); break;
 		// the attack will lead to adding extra bytes of info to the message such that the application will crash
-		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo); break;
+		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo, countExt); break;
 		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
 		case CHANGING_BYTES: changeBytesAttack(msg, n, extraInfo); break;
 	}
@@ -169,18 +188,31 @@ void init(int argc, char **argv)
 	if(strlen(argv[2])==0)
 		error("[ATTACKER] No tag for behavior inside->outside");
 	if(strcmp(argv[2],"a-addbytes") == 0)
+	{
 		typeOfAttackInterior = ADDING_BYTES;
+
+		if(strlen(argv[3])==0)
+			error("[ATTACKER] No file named added");
+		// allocating space for file name
+		add_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
+		// keeping the filename from which we will read the bytes to extra add to message
+		strcpy(add_bytes,argv[3]);
+		dprintf("add_bytes: %s",add_bytes);
+	}
 	else
 		if(strcmp(argv[2],"a-changebytes") == 0)
+		{
 			typeOfAttackInterior = CHANGING_BYTES;
+
+			if(strlen(argv[3])==0)
+					error("[ATTACKER] No file named added");
+			// allocating space for file name
+			change_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
+			// keeping the filename from which we will read the bytes to extra add to message
+			strcpy(change_bytes,argv[3]);
+			dprintf("change_bytes: %s",change_bytes);
+		}
 		else
 			typeOfAttackInterior = UNDEFINED;
 
-	if(strlen(argv[3])==0)
-			error("[ATTACKER] No file named added");
-	// allocating space for file name
-	change_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
-	// keeping the filename from which we will read the bytes to extra add to message
-	strcpy(change_bytes,argv[3]);
-	dprintf("change_bytes: %s",change_bytes);
 }
