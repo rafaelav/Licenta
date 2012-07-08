@@ -12,6 +12,7 @@ char *change_bytes;
 FILE *file;
 int typeOfAttackExterior, typeOfAttackInterior;
 int alternate;
+int badCount;
 
 void changeDirectionAttack(char * originalMsg, int length, int &extraInfo)
 {
@@ -26,6 +27,7 @@ void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &co
 	file = fopen(add_bytes,"r");
 	// reading from file number (alternate bad/good packets)
 	fscanf(file,"%d",&alternate);
+	fscanf(file,"%d",&badCount);
 
 	// [alternate] number of messages have been modified -> [alternate] messages should not be modified
 	if(count <= alternate)
@@ -34,7 +36,7 @@ void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &co
 		fclose(file);
 		return;
 	}
-	if(count > alternate*2)
+	if(count > alternate+badCount)
 	{
 		//dprintf("count>2*alternate/");
 		count = 0; 	//reset count
