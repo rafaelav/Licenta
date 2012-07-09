@@ -14,11 +14,6 @@ int typeOfAttackExterior, typeOfAttackInterior;
 int alternate;
 int badCount;
 
-void changeDirectionAttack(char * originalMsg, int length, int &extraInfo)
-{
-
-}
-
 void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &count)
 {
 	char * extension;
@@ -34,6 +29,7 @@ void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &co
 	{
 		//dprintf("count<=alternate/");
 		fclose(file);
+		free(extension);
 		return;
 	}
 	if(count > alternate+badCount)
@@ -41,6 +37,7 @@ void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &co
 		//dprintf("count>2*alternate/");
 		count = 0; 	//reset count
 		fclose(file);
+		free(extension);
 		return;
 	}
 
@@ -54,6 +51,7 @@ void addExtraBytesAttack(char * originalMsg, int length, int &extraInfo, int &co
 
 	extraInfo = strlen(extension);
 
+	free(extension);
 	fclose(file);
 }
 
@@ -90,8 +88,6 @@ bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr, int &
 {
 	switch(typeOfAttackInterior)
 	{
-		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
-		case CHANGE_DIRECTION: changeDirectionAttack(msg, n, extraInfo); break;
 		// the attack will lead to adding extra bytes of info to the message such that the application will crash
 		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo, countInt); break;
 		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
@@ -104,8 +100,6 @@ bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &
 {
 	switch(typeOfAttackExterior)
 	{
-		// the attack will change bytes from message such as if the player is moving left it will look like it moves right
-		case CHANGE_DIRECTION: changeDirectionAttack(msg, n, extraInfo); break;
 		// the attack will lead to adding extra bytes of info to the message such that the application will crash
 		case ADDING_BYTES: addExtraBytesAttack(msg, n, extraInfo, countExt); break;
 		// the attack will try to modify some bytes in the message thus leading to some patterns being not followed
@@ -117,22 +111,22 @@ bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &
 void init(int argc, char **argv)
 {
 	dprintf(">>> In init -> attacker");
-	if(argc <= 1)
-		return;
+	if(argc <= 3)
+		error("[ATTACKER] Not enough arguments");
 
-	dprintf(">>> In init -> attacker -> enough arguments");
+	//dprintf(">>> In init -> attacker -> enough arguments");
 
-	dprintf(">>> %s",argv[0]);
+	//dprintf(">>> %s",argv[0]);
 
 	if(strlen(argv[1])==0)
 		error("[ATTACKER] No tag for behavior outside->inside");
 
-	if(strcmp(argv[1],"a-direction") == 0)
+/*	if(strcmp(argv[1],"a-direction") == 0)
 	{
 		dprintf("Attack -> Change Direction");
 		typeOfAttackExterior = CHANGE_DIRECTION;
 		return;
-	}
+	}*/
 
 	if(strcmp(argv[1],"a-addbytes") == 0)
 	{

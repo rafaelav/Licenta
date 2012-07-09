@@ -10,82 +10,100 @@
 char *add_bytes;
 char *change_bytes;
 FILE *file;
-int typeOfDefense;
-
-/*void changeDirecectionDefense(char * originalMsg, int lmsg)
-{
-}*/
+int typeOfDefenseExterior;
+int typeOfDefenseInterior;
 
 // returns true when message if NOT ok; returns false when message is ok
-bool addExtraBytesDefense(char * originalMsg, int lmsg)
+bool addExtraBytesDefense(char * originalMsg, int lmsg, int &extraInfo)
 {
-	// Line in file example: start n a1 a2 ... an n_message
-
-	// where pattern starts in message
-	int start;
-	// length of pattern from message
-	int patternLen;
-	// pattern which should be in message
-	char *pattern;
-	// if message has pattern then the length of the message will not exceed maxLen
-	int maxLen;
-	int i;
+	int len;
+	int i,j;
 	bool ruleFits;
 
-	// reading from file the rules
+	char* ruleType;
+	ruleType = (char *) calloc(RULE_LEN,sizeof(char));
+
+	char* ruleLine;
+	ruleLine = (char *) calloc(RULE_LEN,sizeof(char));
+
+	char* pattern;
+	pattern = (char *) calloc(RULE_LEN,sizeof(char));
+
 	file = fopen(add_bytes,"r");
+
 	while (!feof(file))
 	{
-		ruleFits = true;
-		// reading rules by lines
-		fscanf(file, "%d", &start);
-		fscanf(file, "%d", &patternLen);
-		pattern = (char *) calloc(patternLen+1, sizeof(char));
-		fscanf(file, "%d", &maxLen);
-		fscanf(file, "%s", pattern);
+		memset(ruleType, 0, RULE_LEN);
+		fscanf(file, "%s", ruleType);
 
-		dprintf("[DEFENDER][ADD_BYTES] Read rule: %d %d %d %s", start, patternLen, maxLen, pattern);
-
-		// default rule
-		if(start == 0 && patternLen ==0)
+		if(strcmp(ruleType,"virus_signature_start") == 0)
 		{
-			dprintf("[DEFENDER][ADDBYTES] Default rule case");
-			fclose(file);
-			// checking if message has extra bytes added which are not supposed to be there => rule broken => message not ok
-			if(strlen(originalMsg) > maxLen)
-				return true;
-			return false;
-		}
+			dprintf("Entered pattern - signature");
+			memset(ruleLine, 0, RULE_LEN);
+			fscanf(file, "%s", ruleLine);
 
-		// checking patter
-		for(i=start; i<start+patternLen; i++)
-			if(originalMsg[i] != pattern[i-start])
+			while(strcmp(ruleLine,"virus_signature_end") != 0)
 			{
-				dprintf("[DEFENDER][ADDBYTES] Rule doesn't fit -> pattern not found in this message");
-				ruleFits = false;
-				break;
-			}
+				if(strcmp(ruleLine,"last:") == 0)
+				{
+					memset(pattern, 0, RULE_LEN);
+					fscanf(file, "%d", &len);
+					fscanf(file, "%s", pattern);
 
-		// rule applies to message -> we have maximum length per respective message
-		if(ruleFits)
-		{
-			dprintf("[DEFENDER][ADDBYTES] Rule fits -> pattern found in this message");
-			fclose(file);
-			// checking if message has extra bytes added which are not supposed to be there => rule broken => message not ok
-			if(strlen(originalMsg) > maxLen)
-			{
-				dprintf("[DEFENDER][ADDBYTES] Message not ok -> bytes added");
-				return true;
-			}
-			else
-			{
-				return false;
+					dprintf("Len + Pattern + Word + len_word: %d %s %s %d",len,pattern,originalMsg,lmsg);
+
+					ruleFits = true;
+					j=len-1;
+					// check if pattern is indeed found at the end of the message
+					for(i=lmsg-2; i>=lmsg-len-1; i--)
+					{
+						// virus signature does not appear in message
+						if(pattern[j] != originalMsg[i])
+						{
+							ruleFits = false;
+							dprintf("Rule doesn't fit %c %c",pattern[j],originalMsg[i]);
+							break;
+						}
+
+						j--;
+					}
+
+					if(ruleFits == true)
+					{
+						dprintf("Rule doesn't fits: %s", originalMsg);
+						// erase pattern from the end
+						for(i=lmsg-2; i>=lmsg-len-1; i--)
+						{
+							originalMsg[i]=0;
+						}
+						dprintf("MODIFIED MESSAGE: %s",originalMsg);
+
+						// update extraInfo to know that proxy should send less bytes then received
+						extraInfo = 0-len;
+					}
+
+					free(ruleType);
+					free(ruleLine);
+					free(pattern);
+					fclose(file);
+					return false;
+				}
 			}
 		}
+		else
+		/*	if(strcmp(ruleType,"pattern_start") == 0)
+			{
+
+			}
+			else*/
+				error("[DEFENDER] Incorrect rule type in given file");
 	}
+
+	free(ruleType);
+	free(ruleLine);
+	free(pattern);
 	fclose(file);
-	// if there is no default rule and all rules mentioned in the file do not apply by default message will be considered correct
-	return false;
+	return false;	// packets will always be fixed so that the game can continue
 }
 
 bool changeBytesDefense(char * originalMsg, int lmsg)
@@ -156,25 +174,28 @@ bool changeBytesDefense(char * originalMsg, int lmsg)
 			}
 		}
 
-		// if a rule was found and it fited the message
+		// if a rule was found and it fits the message
 		if(ruleFits == true)
 		{
 			fclose(file);
+			free(rule);
+			free(line);
 			return false;
 		}
 	}
+	free(rule);
+	free(line);
 	fclose(file);
 	return true;	// message did not fit any rule and it was not a default rule anywhere
 }
 
-bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr)
+bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo, int &countInt)
 {
 	bool broken = false;
-	switch(typeOfDefense)
+	switch(typeOfDefenseInterior)
 	{
-//		case CHANGE_DIRECTION: changeDirectionDefense(msg, n); break;
 		// the defense will prevent packets with extra bytes added to be forwarded to the machine
-		case ADDING_BYTES: broken = addExtraBytesDefense(msg, n); break;
+		case ADDING_BYTES: broken = addExtraBytesDefense(msg, n, extraInfo); break;
 		// the defense will prevent messages which don't respect some specified patterns to reach the destination
 		case CHANGING_BYTES: broken = changeBytesDefense(msg, n); break;
 	}
@@ -183,14 +204,13 @@ bool ProcessMessageFromInterior(char *msg, int n, struct sockaddr_in addr)
 	return true;
 }
 
-bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr)
+bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr, int &extraInfo, int &countExt)
 {
 	bool broken = false;
-	switch(typeOfDefense)
+	switch(typeOfDefenseExterior)
 	{
-//		case CHANGE_DIRECTION: changeDirectionDefense(msg, n); break;
 		// the defense will prevent packets with extra bytes added to be forwarded to the machine
-		case ADDING_BYTES: broken = addExtraBytesDefense(msg, n); break;
+		case ADDING_BYTES: broken = addExtraBytesDefense(msg, n, extraInfo); break;
 		// the defense will prevent messages which don't respect some specified patterns to reach the destination
 		case CHANGING_BYTES: broken = changeBytesDefense(msg, n); break;
 	}
@@ -202,45 +222,98 @@ bool ProcessMessageFromExterior(char *msg, int n, struct sockaddr_in addr)
 void init(int argc, char **argv)
 {
 	dprintf(">>> In init -> defender");
-	if(argc <= 1)
-		return;
+	if(argc <= 3)
+		error("[DEFENDER] Not enough arguments");
 
-	dprintf(">>> In init -> defender -> enough arguments");
+	//dprintf(">>> In init -> attacker -> enough arguments");
 
-	dprintf(">>> %s",argv[0]);
+	//dprintf(">>> %s",argv[0]);
 
-	if(strcmp(argv[1],"d-direction") == 0)
-	{
-		dprintf("Defense -> Change Direction");
-		typeOfDefense = CHANGE_DIRECTION;
-		return;
-	}
+	if(strlen(argv[1])==0)
+		error("[DEFENDER] No tag for behavior outside->inside");
+
 
 	if(strcmp(argv[1],"d-addbytes") == 0)
 	{
 		dprintf("Defense -> Adding Bytes");
-		typeOfDefense = ADDING_BYTES;
+		typeOfDefenseExterior = ADDING_BYTES;
+
 		if(strlen(argv[2])==0)
-			error("[ATTACKER] No file named added");
+			error("[DEFENDER] No tag for behavior inside->outside");
+		if(strcmp(argv[2],"d-addbytes") == 0)
+			typeOfDefenseInterior = ADDING_BYTES;
+		else
+			if(strcmp(argv[2],"d-changebytes") == 0)
+				typeOfDefenseInterior = CHANGING_BYTES;
+			else
+				typeOfDefenseInterior = UNDEFINED;
+
+		if(strlen(argv[3])==0)
+			error("[DEFENDER] No file named added");
 		// allocating space for file name
-		add_bytes = (char *) calloc(strlen(argv[2])+1,sizeof(char));
+		add_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
 		// keeping the filename from which we will read the bytes to extra add to message
-		strcpy(add_bytes,argv[2]);
+		strcpy(add_bytes,argv[3]);
 		dprintf("add_bytes: %s",add_bytes);
 		return;
 	}
 
+
 	if(strcmp(argv[1],"d-changebytes") == 0)
 	{
 		dprintf("Defense -> Changing Bytes");
-		typeOfDefense = CHANGING_BYTES;
-		// allocating space for file name
+		typeOfDefenseExterior = CHANGING_BYTES;
+
 		if(strlen(argv[2])==0)
-			error("[ATTACKER] No file named added");
-		change_bytes = (char *) calloc(strlen(argv[2])+1,sizeof(char));
+			error("[DEFENDER] No tag for behavior inside->outside");
+		if(strcmp(argv[2],"d-addbytes") == 0)
+			typeOfDefenseInterior = ADDING_BYTES;
+		else
+			if(strcmp(argv[2],"d-changebytes") == 0)
+				typeOfDefenseInterior = CHANGING_BYTES;
+			else
+				typeOfDefenseInterior = UNDEFINED;
+
+		if(strlen(argv[3])==0)
+				error("[DEFENDER] No file named added");
+		// allocating space for file name
+		change_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
 		// keeping the filename from which we will read the bytes to extra add to message
-		strcpy(change_bytes,argv[2]);
+		strcpy(change_bytes,argv[3]);
 		dprintf("change_bytes: %s",change_bytes);
 		return;
 	}
+
+	typeOfDefenseExterior = UNDEFINED;
+
+	if(strlen(argv[2])==0)
+		error("[DEFENDER] No tag for behavior inside->outside");
+	if(strcmp(argv[2],"d-addbytes") == 0)
+	{
+		typeOfDefenseInterior = ADDING_BYTES;
+
+		if(strlen(argv[3])==0)
+			error("[DEFENDER] No file named added");
+		// allocating space for file name
+		add_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
+		// keeping the filename from which we will read the bytes to extra add to message
+		strcpy(add_bytes,argv[3]);
+		dprintf("add_bytes: %s",add_bytes);
+	}
+	else
+		if(strcmp(argv[2],"d-changebytes") == 0)
+		{
+			typeOfDefenseInterior = CHANGING_BYTES;
+
+			if(strlen(argv[3])==0)
+					error("[DEFENDER] No file named added");
+			// allocating space for file name
+			change_bytes = (char *) calloc(strlen(argv[3])+1,sizeof(char));
+			// keeping the filename from which we will read the bytes to extra add to message
+			strcpy(change_bytes,argv[3]);
+			dprintf("change_bytes: %s",change_bytes);
+		}
+		else
+			typeOfDefenseInterior = UNDEFINED;
+
 }
