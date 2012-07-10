@@ -5,6 +5,9 @@ attacker: proxy.o attacker.o
 
 defender: proxy.o defender.o
 	g++ proxy.o defender.o -o defender
+	
+analyzer: proxy.o analyzer.o
+	g++ proxy.o analyzer.o -o analyzer
 
 proxy.o: proxy.cpp proxy.h
 	g++ -c proxy.cpp -o proxy.o
@@ -13,7 +16,10 @@ attacker.o: attacker.cpp attacker.h
 	g++ -c attacker.cpp -o attacker.o	
 
 defender.o: defender.cpp defender.h
-	g++ -c defender.cpp -o defender.o	
+	g++ -c defender.cpp -o defender.o
+	
+analyzer.o: analyzer.cpp analyzer.h
+	g++ -c analyzer.cpp -o analyzer.o	
 
 init: 
 	sudo iptables -t nat -A PREROUTING -p udp ! -i lo --dport 1234 -j REDIRECT --to-port 30002

@@ -38,7 +38,6 @@ bool addExtraBytesDefense(char * originalMsg, int lmsg, int &extraInfo)
 
 		if(strcmp(ruleType,"virus_signature_start") == 0)
 		{
-			dprintf("Entered pattern - signature");
 			memset(ruleLine, 0, RULE_LEN);
 			fscanf(file, "%s", ruleLine);
 
@@ -49,8 +48,6 @@ bool addExtraBytesDefense(char * originalMsg, int lmsg, int &extraInfo)
 					memset(pattern, 0, RULE_LEN);
 					fscanf(file, "%d", &len);
 					fscanf(file, "%s", pattern);
-
-					dprintf("Len + Pattern + Word + len_word: %d %s %s %d",len,pattern,originalMsg,lmsg);
 
 					ruleFits = true;
 					j=len-1;
@@ -70,13 +67,11 @@ bool addExtraBytesDefense(char * originalMsg, int lmsg, int &extraInfo)
 
 					if(ruleFits == true)
 					{
-						dprintf("Rule doesn't fits: %s", originalMsg);
 						// erase pattern from the end
 						for(i=lmsg-2; i>=lmsg-len-1; i--)
 						{
 							originalMsg[i]=0;
 						}
-						dprintf("MODIFIED MESSAGE: %s",originalMsg);
 
 						// update extraInfo to know that proxy should send less bytes then received
 						extraInfo = 0-len;
@@ -224,10 +219,6 @@ void init(int argc, char **argv)
 	dprintf(">>> In init -> defender");
 	if(argc <= 3)
 		error("[DEFENDER] Not enough arguments");
-
-	//dprintf(">>> In init -> attacker -> enough arguments");
-
-	//dprintf(">>> %s",argv[0]);
 
 	if(strlen(argv[1])==0)
 		error("[DEFENDER] No tag for behavior outside->inside");

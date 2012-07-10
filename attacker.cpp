@@ -114,19 +114,8 @@ void init(int argc, char **argv)
 	if(argc <= 3)
 		error("[ATTACKER] Not enough arguments");
 
-	//dprintf(">>> In init -> attacker -> enough arguments");
-
-	//dprintf(">>> %s",argv[0]);
-
 	if(strlen(argv[1])==0)
 		error("[ATTACKER] No tag for behavior outside->inside");
-
-/*	if(strcmp(argv[1],"a-direction") == 0)
-	{
-		dprintf("Attack -> Change Direction");
-		typeOfAttackExterior = CHANGE_DIRECTION;
-		return;
-	}*/
 
 	if(strcmp(argv[1],"a-addbytes") == 0)
 	{

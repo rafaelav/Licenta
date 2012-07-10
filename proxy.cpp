@@ -21,8 +21,6 @@
 
 using namespace std;
 
-//int msgCountExt = 0;
-//int msgCountInt = 0;
 int countInt = 0;
 int countExt = 0;
 
@@ -37,7 +35,8 @@ fd_set readFDS;
 struct sockaddr_in serverAddr;
 struct sockaddr_in listenerAddr;
 int listenerSock;
-
+int SERVER_PORT;
+int LISTEN_PORT;
 
 // maximum file descriptor of a socket - used in select
 int nfds;
@@ -47,6 +46,33 @@ void error(const char *msg) {
 	exit(1);
 }
 
+void initializePorts()
+{
+	FILE *fin;
+	fin = fopen("proxy.config","r");
+	if(fin == NULL)
+		error("No proxy.config");
+
+	char line[100];
+
+	// testing correct line SERVER_PORT
+	fscanf(fin,"%s",line);
+	if(strcmp(line,"SERVER_PORT:") != 0)
+		error("Problems with proxy.config! SERVER_PORT");
+
+	// get SERVER_PORT
+	fscanf(fin,"%d",&SERVER_PORT);
+
+	// testing correct line LISTEN_PORT
+	fscanf(fin,"%s",line);
+	if(strcmp(line,"LISTEN_PORT:") != 0)
+		error("Problems with proxy.config! LISTEN_PORT");
+
+	// get LISTEN_PORT
+	fscanf(fin,"%d",&LISTEN_PORT);
+
+	fclose(fin);
+}
 // initializes the server & program
 void initialize() {
 	dprintf("Initializing server...");
@@ -145,15 +171,7 @@ void ReceiveFromExterior()
 
 	countExt++;
 	// any manipulation of packets will be done just after the communication through the proxy will be established
-	/*	msgCountExt++;
-	if(msgCountExt>=MAX_MSG_INIT)
-	{
-		msgCountExt = MAX_MSG_INIT+1;
-	}*/
 
-	// just after the first MAX_MSG_INIT messages have been exchanged
-	//if(msgCountExt>=MAX_MSG_INIT)
-	//{
 		// function for manipulating message before sending the message to the interior machine
 		val = ProcessMessageFromExterior(msg,size,sockAddr,extraInfo,countExt);
 		dprintf("[EXT] extraInfo field -> %d", extraInfo);
@@ -162,7 +180,7 @@ void ReceiveFromExterior()
 			dprintf("Not forwarding message from exterior to interior");
 			return;
 		}
-	//}
+
 	// verifying if socket corresponding to this client on server side exists
 	list<ASSOC>::iterator it;
 
@@ -226,15 +244,7 @@ void ReceiveFromInterior(ASSOC assoc)
 
 	countInt++;
 	// any manipulation of packets will be done just after the communication through the proxy will be established
-/*	msgCountInt++;
-	if(msgCountInt>=MAX_MSG_INIT)
-	{
-		msgCountInt = MAX_MSG_INIT+1;
-	}*/
 
-	// just after the first MAX_MSG_INIT messages have been exchanged
-//	if(msgCountInt>=MAX_MSG_INIT)
-//	{
 		// function for manipulating message before sending the message to the exterior world
 		val = ProcessMessageFromInterior(msg,size,addr,extraInfo,countInt);
 		dprintf("[EXT] extraInfo field -> %d", extraInfo);
@@ -243,7 +253,6 @@ void ReceiveFromInterior(ASSOC assoc)
 			dprintf("Not forwarding message from interior to exterior");
 			return;
 		}
-//	}
 
 	// send to exterior knowing the correspondence because of association (assoc)
 	dprintf("Trying to SEND message to exterior ...");
@@ -261,6 +270,7 @@ void ReceiveFromInterior(ASSOC assoc)
 
 int main(int argc, char** argv) {
 
+	initializePorts();
 	init(argc,argv);
 	initialize();
 
